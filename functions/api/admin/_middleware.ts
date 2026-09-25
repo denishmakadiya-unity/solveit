@@ -13,5 +13,12 @@ export const onRequest = async (ctx: Ctx) => {
     if (!(await rateLimit(env, key, 10, 900))) return error("Too many attempts. Try again in 15 minutes.", 429);
     return error("Unauthorized.", 401);
   }
-  return ctx.next();
+  try {
+    return await ctx.next();
+  } catch (e: any) {
+    // Authenticated admins get the real reason, which makes setup problems easy to fix.
+    const msg = String(e?.message || e);
+    if (/no such table/i.test(msg)) return error("Database tables are missing. Open D1 → solveit → Console, paste schema.sql and click Execute.", 500);
+    return error("Server error: " + msg.slice(0, 300), 500);
+  }
 };

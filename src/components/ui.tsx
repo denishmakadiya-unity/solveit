@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import type { FAQ as FAQT, ToolDefinition, Workflow } from "../registry/types";
 import { toolHref } from "../registry/tools";
 import { stepById } from "../registry/steps";
 import { categoryById } from "../registry/categories";
 import { useConfig } from "../lib/flags";
+import { ADSENSE_CLIENT } from "../config";
 import { track } from "../lib/analytics";
 
 export function LogoMark({ size = 32 }: { size?: number }) {
@@ -216,30 +217,23 @@ export function downloadBlob(blob: Blob, name: string, tool?: string) {
   track("tool_download", { tool });
 }
 
-export function AdSlot({ id, format = "horizontal" }: { id: string; format?: "horizontal" | "rectangle" }) {
+// Ads are served by AdSense Auto ads (script in <head>, added at build time from ADSENSE_CLIENT).
+// A manual unit renders only when a real numeric ad-unit ID is passed as `unit`.
+export function AdSlot({ unit, format = "horizontal" }: { id?: string; unit?: string; format?: "horizontal" | "rectangle" }) {
   const cfg = useConfig();
-  const ref = useRef<HTMLModElement>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  const ok = mounted && cfg.adsEnabled && !!ADSENSE_CLIENT && !!unit && /^\d+$/.test(unit);
   useEffect(() => {
-    if (!mounted || !cfg.adsEnabled || !cfg.adsenseClient) return;
-    const w = window as any;
-    if (!document.querySelector("script[data-adsense]")) {
-      const s = document.createElement("script");
-      s.async = true;
-      s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(cfg.adsenseClient)}`;
-      s.crossOrigin = "anonymous";
-      s.dataset.adsense = "1";
-      document.head.appendChild(s);
-    }
-    try { (w.adsbygoogle = w.adsbygoogle || []).push({}); } catch { /* ad blockers */ }
-  }, [mounted, cfg.adsEnabled, cfg.adsenseClient]);
-  if (!mounted || !cfg.adsEnabled || !cfg.adsenseClient) return null;
+    if (!ok) return;
+    try { const w = window as any; (w.adsbygoogle = w.adsbygoogle || []).push({}); } catch { /* ad blockers */ }
+  }, [ok]);
+  if (!ok) return null;
   return (
-    <aside className="ad-slot" aria-label="Advertisement" data-slot={id}>
+    <aside className="ad-slot" aria-label="Advertisement">
       <span className="ad-label">Advertisement</span>
-      <ins ref={ref} className="adsbygoogle" style={{ display: "block", width: "100%" }} data-ad-client={cfg.adsenseClient}
-        data-ad-slot={id} data-ad-format={format === "rectangle" ? "rectangle" : "auto"} data-full-width-responsive="true" />
+      <ins className="adsbygoogle" style={{ display: "block", width: "100%" }} data-ad-client={ADSENSE_CLIENT}
+        data-ad-slot={unit} data-ad-format={format === "rectangle" ? "rectangle" : "auto"} data-full-width-responsive="true" />
     </aside>
   );
 }

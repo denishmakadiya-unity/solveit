@@ -61,6 +61,13 @@ const ssr = await import(pathToFileURL(path.join(BUILD, "ssr.mjs")).href + "?t="
 ssr.setSiteUrl(SITE_URL);
 const routes = ssr.getRoutes();
 
+const cfgSrc = await readFile(path.join(ROOT, "src/config.ts"), "utf8");
+const ADSENSE = ((cfgSrc.match(/ADSENSE_CLIENT\s*=\s*"([^"]*)"/) || [])[1] || process.env.ADSENSE_CLIENT || "").trim();
+if (ADSENSE && !/^ca-pub-\d{10,20}$/.test(ADSENSE)) throw new Error(`ADSENSE_CLIENT "${ADSENSE}" is not a valid ca-pub-… ID`);
+const ADS_HEAD = ADSENSE && process.env.NO_ADS !== "1"
+  ? `<meta name="google-adsense-account" content="${ADSENSE}">\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE}" crossorigin="anonymous"></script>`
+  : "";
+
 const FONTS = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap";
 
 function page(route, body) {
@@ -90,6 +97,7 @@ ${route.page === "notfound" ? "" : `<link rel="canonical" href="${esc(url)}">`}
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <script src="/assets/${themeName}"></script>
+${route.page === "admin" ? "" : ADS_HEAD}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="${FONTS}">
@@ -124,6 +132,7 @@ await writeFile(path.join(DIST, "robots.txt"), `User-agent: *\nAllow: /\nDisallo
 // 7) Static public files (headers, icons, manifest, ads.txt)
 const PUB = path.join(ROOT, "public");
 for (const f of await readdir(PUB)) await cp(path.join(PUB, f), path.join(DIST, f), { recursive: true });
+if (ADSENSE) await writeFile(path.join(DIST, "ads.txt"), `google.com, ${ADSENSE.replace(/^ca-/, "")}, DIRECT, f08c47fec0942fa0\n`);
 
 // Icons rendered from the SVG logo
 try {
@@ -146,4 +155,5 @@ try {
 
 const jsFiles = Object.entries(client.metafile.outputs).filter(([f]) => f.endsWith(".js"));
 const appBytes = client.metafile.outputs[appFile].bytes;
+console.log(ADSENSE ? `AdSense: ${ADSENSE} (head tags + ads.txt)` : "AdSense: not configured (set ADSENSE_CLIENT in src/config.ts)");
 console.log(`Built ${count} pages, ${jsFiles.length} JS chunks (entry ${(appBytes / 1024).toFixed(0)} KB) for ${SITE_URL} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

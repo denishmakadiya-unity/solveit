@@ -11,6 +11,10 @@ export const SITE = {
   twitter: "",
 };
 
+// Google AdSense publisher ID, e.g. "ca-pub-1234567890123456".
+// Paste yours here; the build adds the AdSense code + verification tag to every page and writes ads.txt.
+export const ADSENSE_CLIENT = "";
+
 export type FeatureFlags = {
   adsEnabled: boolean;
   subscriptionEnabled: boolean;
