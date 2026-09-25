@@ -13,7 +13,7 @@ export const SITE = {
 
 // Google AdSense publisher ID, e.g. "ca-pub-1234567890123456".
 // Paste yours here; the build adds the AdSense code + verification tag to every page and writes ads.txt.
-export const ADSENSE_CLIENT = "";
+export const ADSENSE_CLIENT = "ca-pub-4837586809445317";
 
 export type FeatureFlags = {
   adsEnabled: boolean;
