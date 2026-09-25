@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.build/
+.typecheck/
+.wrangler/
+.DS_Store
+*.log

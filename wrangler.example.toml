@@ -1,0 +1,9 @@
+# Cloudflare Pages configuration for SolveIt.
+name = "solveit"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "solveit"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
