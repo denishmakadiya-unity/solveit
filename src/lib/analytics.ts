@@ -36,8 +36,8 @@ export function track(event: EventName, props: { tool?: string; workflow?: strin
       s: sessionId(),
     });
     const blob = new Blob([body], { type: "application/json" });
-    if (!navigator.sendBeacon?.("/api/track", blob)) {
-      fetch("/api/track", { method: "POST", body, headers: { "content-type": "application/json" }, keepalive: true }).catch(() => {});
+    if (!navigator.sendBeacon?.("/api/ev", blob)) {
+      fetch("/api/ev", { method: "POST", body, headers: { "content-type": "application/json" }, keepalive: true }).catch(() => {});
     }
   } catch {
     /* never break the UI for analytics */

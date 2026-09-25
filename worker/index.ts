@@ -13,7 +13,7 @@ import type { Env } from "../server/lib";
 
 type Mod = Record<string, any>;
 const ROUTES: Record<string, Mod> = {
-  "/api/track": track, "/api/contact": contact, "/api/config": config, "/api/ai": ai,
+  "/api/track": track, "/api/ev": track, "/api/contact": contact, "/api/config": config, "/api/ai": ai,
   "/api/admin/stats": stats, "/api/admin/settings": settings, "/api/admin/messages": messages,
 };
 const handlerFor = (mod: Mod, method: string) => mod[`onRequest${method[0]}${method.slice(1).toLowerCase()}`] || mod.onRequest;
