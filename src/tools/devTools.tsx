@@ -246,7 +246,7 @@ export function QrCodeGenerator({ tool }: ToolProps) {
     qrToCanvas(matrix.m, +size, { fg, bg }).toBlob((b) => b && downloadBlob(b, "qr-code.png", tool.id), "image/png");
   };
   return (
-    <div className="tool-layout" style={{ gridTemplateColumns: "minmax(0,1fr) 300px" }}>
+    <div className="tool-layout side-300">
       <div className="stack">
         <div className="chips">
           {([["url", "Link"], ["text", "Text"], ["wifi", "Wi-Fi"], ["upi", "UPI payment"], ["email", "Email"], ["phone", "Phone"]] as [QrType, string][]).map(([v, l]) => (
@@ -350,7 +350,7 @@ export function PasswordGenerator({ tool }: ToolProps) {
     <div className="stack">
       <Seg label="Type" value={kind} onChange={setKind} options={[{ value: "password", label: "Random password" }, { value: "passphrase", label: "Memorable passphrase" }]} />
       <div className="row" style={{ alignItems: "stretch", flexWrap: "nowrap" }}>
-        <pre className="code-out" style={{ flex: 1, fontSize: "1.25rem", margin: 0, display: "flex", alignItems: "center" }} data-testid="password">{pw}</pre>
+        <pre className="code-out" style={{ flex: 1, minWidth: 0, fontSize: "1.25rem", margin: 0, display: "flex", alignItems: "center", wordBreak: "break-all" }} data-testid="password">{pw}</pre>
         <button className="btn btn-secondary" style={{ height: "auto" }} aria-label="Generate another" onClick={() => { setSeed(seed + 1); track("tool_success", { tool: tool.id }); }}><Icon name="repeat2" /></button>
         <CopyButton text={pw} className="btn btn-primary" />
       </div>

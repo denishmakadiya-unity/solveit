@@ -165,7 +165,7 @@ export function BuilderPage() {
         <div><h1 style={{ fontSize: "clamp(1.8rem, 3.2vw, 2.4rem)" }}>Workflow Builder</h1><p className="lead">Chain tools together. Add, reorder and configure steps, then run them on one upload.</p></div>
         <div className="row"><button className="btn btn-secondary" onClick={save}><Icon name="save" size={16} /> Save workflow</button></div>
       </div>
-      <div className="tool-layout" style={{ gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)" }}>
+      <div className="tool-layout cols-2">
         <div className="stack">
           <div className="card stack">
             <div className="form-grid">
