@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "solveit",
-      "database_id": "PASTE_YOUR_D1_DATABASE_ID_HERE"
+      "database_id": "0a37da82-6b5f-4411-8780-6719efaa5603"
     }
   ],
   "routes": [
