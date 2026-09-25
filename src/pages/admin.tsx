@@ -6,7 +6,7 @@ import { WORKFLOWS } from "../registry/workflows";
 import { CATEGORIES } from "../registry/categories";
 import { TEMPLATE_CATEGORIES, workflowsForAudience } from "../registry/templates";
 import { GUIDES } from "../registry/guides";
-import { DEFAULT_FLAGS, type FeatureFlags } from "../config";
+import { ADSENSE_CLIENT, DEFAULT_FLAGS, SITE, type FeatureFlags } from "../config";
 import { num, timeAgo } from "../lib/format";
 
 type Stats = {
@@ -72,8 +72,17 @@ export function AdminPage() {
   const [settings, setSettings] = useState<Settings>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  // "boot" is true until we know whether a saved session exists — avoids flashing the sign-in form on refresh.
+  const [boot, setBoot] = useState(true);
 
-  useEffect(() => { try { const t = sessionStorage.getItem("solveit:admin"); if (t) { setToken(t); login(t); } } catch { /* ignore */ } }, []);
+  useEffect(() => {
+    const h = location.hash.slice(1);
+    if (SECTIONS.some(([id]) => id === h)) setSec(h as Section);
+    let t = "";
+    try { t = sessionStorage.getItem("solveit:admin") || ""; } catch { /* ignore */ }
+    if (t) { setToken(t); login(t).finally(() => setBoot(false)); } else setBoot(false);
+  }, []);
+  const go = (id: Section) => { setSec(id); try { history.replaceState(null, "", "#" + id); } catch { /* ignore */ } };
 
   const api = async (path: string, init?: RequestInit, t = token) => {
     const res = await fetch(`/api/admin/${path}`, { ...init, headers: { ...(init?.headers || {}), authorization: `Bearer ${t}`, "content-type": "application/json" } });
@@ -95,9 +104,22 @@ export function AdminPage() {
       setAuthed(true);
       try { sessionStorage.setItem("solveit:admin", t); } catch { /* ignore */ }
     } catch (e: any) {
-      setErr(e.status === 401 ? "That admin token isn't valid." : e.status === 404 || e instanceof TypeError ? "The admin API isn't reachable here. Deploy to Cloudflare Pages with the D1 database to use live data." : e.message);
+      setErr(e.status === 401 ? "That admin token isn't valid." : e.status === 404 || e instanceof TypeError ? "The admin API isn't reachable. Check that the latest deploy succeeded and the D1 database is bound as DB." : e.message);
       try { sessionStorage.removeItem("solveit:admin"); } catch { /* ignore */ }
     }
+  };
+  const deleteMessage = async (id: number) => {
+    if (!window.confirm("Delete this message?")) return;
+    setMessages((list) => list.filter((m) => m.id !== id));
+    if (demo) return;
+    try { await api("messages", { method: "POST", body: JSON.stringify({ delete: id }) }); toast("Message deleted"); } catch (e: any) { toast(e.message); loadAll(); }
+  };
+  const exportCsv = () => {
+    const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = [["Tool", "Views", "Starts", "Success", "Errors", "Downloads"], ...TOOLS.map((t) => { const s = stats?.tools.find((x) => x.tool === t.id); return [t.name, s?.views ?? 0, s?.starts ?? 0, s?.success ?? 0, s?.errors ?? 0, s?.downloads ?? 0]; })];
+    const url = URL.createObjectURL(new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `solveit-tools-${days}d.csv` });
+    a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const useDemo = () => { const s = sample(); setStats(s.stats); setSettings(s.settings); setMessages(s.messages); setDemo(true); setAuthed(true); };
   const saveSettings = async (next: Settings) => {
@@ -105,6 +127,15 @@ export function AdminPage() {
     if (demo) return toast("Sample mode — settings aren't saved");
     try { await api("settings", { method: "PUT", body: JSON.stringify(next) }); toast("Settings saved"); } catch (e: any) { toast(e.message); }
   };
+
+  if (boot && !authed) {
+    return (
+      <div className="container narrow" style={{ paddingBlock: 96, textAlign: "center" }} aria-busy="true">
+        <Icon name="repeat2" size={28} className="spin" />
+        <p className="muted" style={{ marginTop: 12 }}>Loading dashboard…</p>
+      </div>
+    );
+  }
 
   if (!authed) {
     return (
@@ -141,7 +172,7 @@ export function AdminPage() {
       </div>
       <div className="admin-shell">
         <nav className="admin-nav" aria-label="Admin sections">
-          {SECTIONS.map(([id, label, icon]) => <button key={id} aria-current={sec === id} onClick={() => setSec(id)}><Icon name={icon} size={16} /> {label}</button>)}
+          {SECTIONS.map(([id, label, icon]) => <button key={id} aria-current={sec === id} onClick={() => go(id)}><Icon name={icon} size={16} /> {label}</button>)}
         </nav>
         <div className="stack" style={{ minWidth: 0 }}>
           {sec === "overview" && (
@@ -163,7 +194,7 @@ export function AdminPage() {
           )}
           {sec === "tools" && settings && (
             <div className="card">
-              <h3 style={{ marginBottom: 6 }}>Tool management</h3>
+              <div className="row between"><h3 style={{ marginBottom: 6 }}>Tool management</h3><button className="btn btn-secondary btn-sm" onClick={exportCsv}><Icon name="download" size={14} /> Export CSV</button></div>
               <p className="hint" style={{ marginBottom: 12 }}>Turn a tool off to show a “temporarily unavailable” notice without redeploying. Tools are added in <code>src/registry/tools.ts</code>.</p>
               <div className="table-wrap">
                 <table>
@@ -242,7 +273,7 @@ export function AdminPage() {
                   <input id="ads" className="input" defaultValue={settings.adsenseClient} placeholder="ca-pub-…" onBlur={(e) => { const v = e.target.value.trim(); if (v === settings.adsenseClient) return; if (v && !/^ca-pub-\d{10,20}$/.test(v)) return toast("Enter a valid ca-pub ID"); saveSettings({ ...settings, adsenseClient: v }); }} />
                 </div>
               </Field>
-              <Alert kind="info">Ad slots sit below tools and between sections — never over upload controls or next to download buttons. Also add your <code>ads.txt</code> line in <code>public/ads.txt</code>.</Alert>
+              <Alert kind="info">Ad slots sit below tools and between sections — never over upload controls or next to download buttons. <code>ads.txt</code> is generated automatically from <code>ADSENSE_CLIENT</code> in <code>src/config.ts</code>.</Alert>
             </div>
           )}
           {sec === "revenue" && (
@@ -279,6 +310,10 @@ export function AdminPage() {
                   <div key={m.id} className="card flat" style={{ padding: 14 }}>
                     <div className="row between"><b>{m.name || "Anonymous"} · <a href={`mailto:${m.email}`}>{m.email}</a></b><span className="hint">{timeAgo(m.ts)} · {m.topic}</span></div>
                     <p style={{ marginTop: 6, whiteSpace: "pre-wrap" }}>{m.message}</p>
+                    <div className="row" style={{ marginTop: 10 }}>
+                      <a className="btn btn-soft btn-sm" href={`mailto:${m.email}?subject=${encodeURIComponent("Re: your message to SolveIt")}`}><Icon name="mail" size={14} /> Reply</a>
+                      <button className="btn btn-ghost btn-sm" onClick={() => deleteMessage(m.id)}>Delete</button>
+                    </div>
                   </div>
                 ))}</div>
               )}</div>
@@ -296,14 +331,22 @@ export function AdminPage() {
           )}
           {sec === "settings" && (
             <div className="card stack">
-              <h3>Settings</h3>
-              <SimpleTable head={["Setting", "Where to change it"]} rows={[
-                ["Admin token", "Cloudflare → Pages → Settings → Environment variables → ADMIN_TOKEN (secret)"],
-                ["AI provider key", "ANTHROPIC_API_KEY (secret)"],
-                ["Database", "D1 binding named DB (see README)"],
-                ["Site URL", "SITE_URL build variable"],
-                ["Support email", "src/config.ts → SITE.supportEmail"],
+              <h3>Settings &amp; setup status</h3>
+              <SimpleTable head={["Item", "Status", "Where to change it"]} rows={[
+                ["Admin token", demo ? "—" : "✅ Working", "Cloudflare → Workers & Pages → solveit → Settings → Variables and Secrets → ADMIN_TOKEN (Secret)"],
+                ["Database (D1)", demo ? "—" : "✅ Connected", "wrangler.jsonc → d1_databases → database_id"],
+                ["AI key", settings?.aiConfigured ? "✅ Set" : "⚪ Not set (AI mode off)", "Variables and Secrets → ANTHROPIC_API_KEY (Secret)"],
+                ["AdSense ID", ADSENSE_CLIENT ? "✅ " + ADSENSE_CLIENT : "⚪ Not set", "src/config.ts → ADSENSE_CLIENT"],
+                ["Show ads", settings?.flags.adsEnabled ? "✅ On" : "⚪ Off", "Admin → Ads"],
+                ["Site URL", SITE.url, "src/config.ts → SITE.url"],
+                ["Support email", SITE.supportEmail, "src/config.ts → SITE.supportEmail"],
               ]} />
+              <div className="row">
+                <a className="btn btn-secondary btn-sm" href="/ads.txt" target="_blank" rel="noopener"><Icon name="external" size={14} /> ads.txt</a>
+                <a className="btn btn-secondary btn-sm" href="/sitemap.xml" target="_blank" rel="noopener"><Icon name="external" size={14} /> sitemap.xml</a>
+                <a className="btn btn-secondary btn-sm" href="https://search.google.com/search-console" target="_blank" rel="noopener"><Icon name="external" size={14} /> Search Console</a>
+                <a className="btn btn-secondary btn-sm" href="https://dash.cloudflare.com/" target="_blank" rel="noopener"><Icon name="external" size={14} /> Cloudflare</a>
+              </div>
             </div>
           )}
         </div>
