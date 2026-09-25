@@ -34,7 +34,15 @@ A problem-first utility workspace: people describe what they want to get done, a
 - Uploads are checked in the browser for type, size (images 40 MB, PDFs 100 MB) and count (50 files)
 - Recent result files are kept in the browser for 6 hours for "upload once", then expire
 
-## Deploy to Cloudflare Pages (recommended)
+## Deploy as a Cloudflare Worker (with static assets)
+
+The project also runs as a Worker: `wrangler.jsonc` + `worker/index.ts` serve `dist/` and the `/api/*` handlers.
+1. Create the D1 database `solveit`, run `schema.sql` in its Console and copy its **Database ID** into `wrangler.jsonc`.
+2. Worker → Settings → Build: build command `npm run build`, deploy command `npx wrangler deploy`.
+3. Worker → Settings → Variables and Secrets: add `ADMIN_TOKEN` as a **Secret**.
+4. Worker → Settings → Domains & Routes: add `getsolveit.com`.
+
+## Deploy to Cloudflare Pages (alternative)
 
 ### 1. Put the code on GitHub
 Create a new **private** repository on github.com and upload the contents of this folder. Leave out `node_modules`, `dist` and `.build`.
