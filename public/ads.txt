@@ -1,2 +1,2 @@
 # After Google AdSense approves your site, replace this line with the line AdSense gives you, e.g.:
-# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+# google.com, pub-4837586809445317, DIRECT, f08c47fec0942fa0
